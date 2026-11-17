@@ -1,6 +1,6 @@
 # 🌊 NEEL — Linux-Native Voice & System AI Companion
 
-> **Neel** (*नील*) — The Blue Ocean, built for **Sagar** (*सागर*).  
+> **Neel** — The Blue Ocean AI Companion, built for **Sagar**.  
 > A lightweight, always-ready AI friend hardwired directly into Linux Mint / Ubuntu X11.
 
 ## ✨ Capabilities
