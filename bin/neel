@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Neel CLI Controller
+
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+PIDFILE="$DIR/neel.pid"
+VENV_PYTHON="$DIR/.venv/bin/python"
+
+case "$1" in
+    start)
+        if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+            echo "🌊 Neel is already running (PID: $(cat "$PIDFILE"))"
+            exit 0
+        fi
+        echo "🌊 Starting Neel daemon..."
+        PYTHONPATH="$DIR" nohup "$VENV_PYTHON" -u "$DIR/neel.py" </dev/null >> "$DIR/neel.log" 2>&1 &
+        echo $! > "$PIDFILE"
+        sleep 1.5
+        if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+            echo "✅ Neel is now online! (PID: $(cat "$PIDFILE"))"
+            echo "   Memory: Under 190MB RAM | Log: $DIR/neel.log"
+            echo "   Say 'Hey Neel' to give a command."
+        else
+            echo "❌ Failed to start. Check $DIR/neel.log"
+        fi
+        ;;
+    stop)
+        if [ -f "$PIDFILE" ]; then
+            PID=$(cat "$PIDFILE")
+            if kill -0 "$PID" 2>/dev/null; then
+                echo "🌊 Stopping Neel (PID: $PID)..."
+                kill "$PID" 2>/dev/null
+                sleep 0.5
+                kill -9 "$PID" 2>/dev/null
+            fi
+            rm -f "$PIDFILE"
+            echo "✅ Neel stopped. All memory released."
+        else
+            # Also catch any rogue neel.py instances
+            pkill -f "neel.py" 2>/dev/null
+            echo "🌊 Neel is not running."
+        fi
+        ;;
+    status)
+        if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+            PID=$(cat "$PIDFILE")
+            MEM=$(ps -o rss= -p "$PID" | awk '{printf "%.1f MB", $1/1024}')
+            CPU=$(ps -o %cpu= -p "$PID" | awk '{print $1 "%"}')
+            echo "🌊 Neel is ONLINE (PID: $PID)"
+            echo "   RAM Usage: $MEM"
+            echo "   CPU Usage: $CPU"
+            echo "   Log File:  $DIR/neel.log"
+        else
+            echo "⚪ Neel is OFFLINE. Start with 'neel start'"
+        fi
+        ;;
+    run)
+        echo "🌊 Running Neel in foreground..."
+        exec "$VENV_PYTHON" "$DIR/neel.py"
+        ;;
+    test)
+        shift
+        CMD="$*"
+        if [ -z "$CMD" ]; then
+            echo "Usage: neel test <command>"
+            exit 1
+        fi
+        PYTHONPATH="$DIR" "$VENV_PYTHON" -c "
+import asyncio, sys
+from modules.brain import Brain
+async def run():
+    res = await Brain.process_intent('''$CMD''')
+    print('Neel response:', res)
+asyncio.run(run())
+"
+        ;;
+    *)
+        echo "🌊 Neel — Voice & System AI Companion"
+        echo "Usage: neel {start|stop|status|run|test <text>}"
+        echo ""
+        echo "Commands:"
+        echo "  neel start         Start Neel as a background daemon"
+        echo "  neel stop          Stop Neel and release all memory"
+        echo "  neel status        Check if Neel is running and inspect RAM/CPU"
+        echo "  neel run           Run Neel interactively in the terminal"
+        echo "  neel test <cmd>    Simulate a text command through Neel's brain"
+        exit 1
+        ;;
+esac
