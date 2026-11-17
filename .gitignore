@@ -1,0 +1,22 @@
+# Python virtual environment & caches
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large speech models (downloaded during setup)
+data/vosk-model/
+data/*.zip
+
+# Runtime artifacts & logs
+neel.pid
+neel.log
+*.log
+
+# Secrets & environment
+.env
+*.key
+
+# OS noise
+.DS_Store
+Thumbs.db
